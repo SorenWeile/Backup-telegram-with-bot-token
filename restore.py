@@ -1,6 +1,7 @@
 import asyncio
 import os
 import argparse
+from datetime import datetime
 from telegram import Bot
 from telegram.error import RetryAfter, TelegramError
 from sqlalchemy import create_engine, text
@@ -15,7 +16,13 @@ SEND_DELAY = 1.5  # seconds between messages — safe for channels
 
 
 def format_header(msg) -> str:
-    timestamp = msg.date.strftime('%Y-%m-%d %H:%M:%S UTC') if msg.date else '?'
+    raw = msg.date
+    if not raw:
+        timestamp = '?'
+    elif isinstance(raw, str):
+        timestamp = raw.split('.')[0] + ' UTC'
+    else:
+        timestamp = raw.strftime('%Y-%m-%d %H:%M:%S UTC')
     parts = []
     if msg.full_name:
         parts.append(msg.full_name)
