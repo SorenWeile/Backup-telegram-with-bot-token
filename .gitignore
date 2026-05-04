@@ -1,0 +1,8 @@
+.env
+*.db
+*.log
+telegram_media_backup/
+__pycache__/
+*.pyc
+.venv/
+venv/
