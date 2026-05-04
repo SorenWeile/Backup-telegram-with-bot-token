@@ -65,7 +65,7 @@ async def restore(chat_id: str, dry_run: bool) -> None:
         for i, msg in enumerate(messages, 1):
             header = format_header(msg)
             body = msg._mapping.get('text') or ''
-            caption = f"{header}\n\n{body}".strip() if body else header
+            caption = body
             media = media_map.get(msg.message_id)
 
             print(f"[{i}/{total}] {header}", end=' — ')
@@ -93,13 +93,14 @@ async def restore(chat_id: str, dry_run: bool) -> None:
                         await send_with_retry(bot.send_sticker(chat_id, f))
                         if body:
                             await asyncio.sleep(SEND_DELAY)
-                            await send_with_retry(bot.send_message(chat_id, caption[:4096]))
+                            await send_with_retry(bot.send_message(chat_id, body[:4096]))
                     else:
                         await send_with_retry(bot.send_document(chat_id, f, caption=cap))
                 print(f"[{mtype}] sent")
 
             elif media:
-                note = f"{caption}\n\n⚠️ [{media.media_type} file not found on disk]"
+                note = (f"{caption}\n\n⚠️ [{media.media_type} file not found on disk]" if caption
+                        else f"{header}\n\n⚠️ [{media.media_type} file not found on disk]")
                 await send_with_retry(bot.send_message(chat_id, note[:4096]))
                 print(f"[{media.media_type}] file missing — sent text note")
 
