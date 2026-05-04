@@ -7,7 +7,7 @@ RUN adduser --disabled-password --gecos '' botuser
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY Bkt.py .
+COPY *.py .
 
 RUN mkdir -p /data/db /data/media && chown -R botuser:botuser /data
 
