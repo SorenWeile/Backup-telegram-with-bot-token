@@ -12,6 +12,11 @@ load_dotenv()
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///telegram_backup.db')
 MEDIA_BACKUP_DIR = os.getenv('MEDIA_BACKUP_DIR', 'telegram_media_backup')
+ALLOWED_CHAT_IDS = {
+    int(cid.strip())
+    for cid in os.getenv('ALLOWED_CHAT_IDS', '').split(',')
+    if cid.strip()
+}
 
 if not BOT_TOKEN:
     raise ValueError("BOT_TOKEN must be set in the .env file")
@@ -60,6 +65,10 @@ os.makedirs(MEDIA_BACKUP_DIR, exist_ok=True)
 async def backup_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     message = update.effective_message
     if not message:
+        return
+
+    if ALLOWED_CHAT_IDS and message.chat_id not in ALLOWED_CHAT_IDS:
+        logger.warning("Ignored message from unauthorized chat %s", message.chat_id)
         return
 
     try:
