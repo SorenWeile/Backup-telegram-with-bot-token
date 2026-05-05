@@ -109,13 +109,13 @@ All configuration is done via the `.env` file.
 To restrict the bot so it only backs up specific channels or groups, add their IDs to `ALLOWED_CHAT_IDS` in your `.env`:
 
 ```
-ALLOWED_CHAT_IDS=-1001234567890,-1009876543210
+ALLOWED_CHAT_IDS=-123456789,-19541465165
 ```
 
 The chat ID is logged every time a message is backed up:
 
 ```
-Backed up message 5 from chat -1003939651973
+Backed up message 5 from chat -123456789
 ```
 
 If `ALLOWED_CHAT_IDS` is left empty, the bot accepts messages from all chats.
@@ -148,18 +148,18 @@ Example output:
 Found 4 messages to restore
 DRY RUN — nothing will be sent
 
-[1/4] [2026-05-04 16:25:28 UTC] Rev Stamper @foxRev — [text] /start
+[1/4] [2026-05-04 16:25:28 UTC] Channel post — [photo] Testing
 [2/4] [2026-05-04 18:39:07 UTC] Channel post — [text] Testing
 [3/4] [2026-05-04 18:40:43 UTC] Channel post — [sticker]
 [4/4] [2026-05-04 18:40:49 UTC] Channel post — [photo]
 
-Done — restored 4 messages to -1001234567890
+Done — restored 4 messages to -123456789
 ```
 
 ### Run the restore
 
 ```bash
-docker compose exec bot python restore.py --chat-id -1001234567890
+docker compose exec bot python restore.py --chat-id -123456789
 ```
 
 The script handles Telegram's rate limits automatically and waits if it gets throttled.
@@ -235,6 +235,5 @@ WARNING - Ignored message from unauthorized chat -1009999999999
 
 ---
 
-## License
 
-MIT License. See [LICENSE](LICENSE) for details.
+Forked from https://github.com/AiGptCode/Backup-telegram-with-bot-token
