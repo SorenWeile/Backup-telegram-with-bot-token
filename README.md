@@ -1,71 +1,240 @@
-# Backup Telegram with bot token
- 
-This is a Telegram bot designed to back up messages and media files from Telegram chats to a local file system and a SQLite database. It handles various types of media including photos, videos, documents, voice messages, and more.
+# Telegram Backup Bot
+
+A Telegram bot that backs up messages and media from channels and groups to a SQLite database and local storage. Runs as a Docker container with persistent volumes and includes a restore script to replay backups back into Telegram.
 
 ## Features
 
-- Backups text messages and various media types (photos, videos, documents, etc.)
-- Stores message details and media file paths in a SQLite database
-- Asynchronously downloads media files to a specified directory
-- Configurable via environment variables
+- Backs up text messages, captions, photos, videos, documents, voice messages, audio, animations, and stickers
+- Stores message metadata (sender, timestamp, reply context) in a SQLite database
+- Downloads and stores all media files to disk
+- Whitelist-based access control — only backs up chats you authorize
+- Restore script replays the full backup back to any channel or group
+- Dry run mode to preview a restore before sending anything
+- Runs 24/7 in Docker with automatic restart on crash or reboot
 
 ## Requirements
 
-- Python 3.7 or later
-- Dependencies specified in `requirements.txt`
+- Docker and Docker Compose
+- A Telegram bot token from [@BotFather](https://t.me/BotFather)
+
+## Project Structure
+
+```
+Bkt.py              # Bot — listens and backs up incoming messages
+restore.py          # Restore script — replays backup to a Telegram chat
+Dockerfile          # Container image definition
+docker-compose.yml  # Service, volumes, and restart policy
+requirements.txt    # Python dependencies
+.env.example        # Environment variable template
+```
 
 ## Setup
 
-### 1. Clone the Repository
-
-### 2. Create a Virtual Environment
+### 1. Clone the repository
 
 ```bash
-python -m venv venv
-source venv/bin/activate  # On Windows use `venv\Scripts\activate`
+git clone https://github.com/Revstamper/Backup-telegram-with-bot-token.git
+cd Backup-telegram-with-bot-token
 ```
 
-### 3. Install Dependencies
+### 2. Install Docker
+
+On Ubuntu 24.04:
 
 ```bash
-pip install -r requirements.txt
+curl -fsSL https://get.docker.com | sudo sh
 ```
 
-### 4. Create a `.env` File
-
-Create a `.env` file in the project root with the following content:
-
-```
-BOT_TOKEN=your_telegram_bot_token
-DATABASE_URL=sqlite:///telegram_backup.db
-MEDIA_BACKUP_DIR=telegram_media_backup
-```
-
-Replace `your_telegram_bot_token` with your actual Telegram bot token. The `DATABASE_URL` specifies the SQLite database file location (you can change this if you use a different database). `MEDIA_BACKUP_DIR` is the directory where media files will be stored.
-
-### 5. Run the Bot
+### 3. Create your `.env` file
 
 ```bash
-python bot.py
+cp .env.example .env
+nano .env
 ```
 
-The bot will start polling for new messages and will back up messages and media to the specified directory and database.
+Fill in your values:
 
-## Code Overview
+```
+BOT_TOKEN=your_telegram_bot_token_here
+DATABASE_URL=sqlite:////data/db/telegram_backup.db
+MEDIA_BACKUP_DIR=/data/media
+ALLOWED_CHAT_IDS=-1001234567890,-1009876543210
+```
 
-- **`bot.py`**: Main bot logic, including message handling and media backup.
-- **`requirements.txt`**: Python package dependencies.
-- **`.env`**: Configuration file for environment variables.
-- **`telegram_backup_bot.log`**: Log file for bot activities and errors.
+See the [Configuration](#configuration) section below for details on each variable.
+
+### 4. Build and start
+
+```bash
+docker compose up -d
+```
+
+### 5. Check the logs
+
+```bash
+docker compose logs -f
+```
+
+You should see:
+
+```
+Bot started, polling for messages...
+```
+
+### 6. Add the bot to your channel
+
+1. Open your channel in Telegram → **Manage Channel** → **Administrators**
+2. Add your bot as an administrator
+3. It only needs **Read Messages** — all other permissions can be disabled
+
+Post a test message and you should see `Backed up message ...` appear in the logs.
+
+---
+
+## Configuration
+
+All configuration is done via the `.env` file.
+
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `BOT_TOKEN` | Yes | — | Your bot token from @BotFather |
+| `DATABASE_URL` | No | `sqlite:////data/db/telegram_backup.db` | SQLite database path |
+| `MEDIA_BACKUP_DIR` | No | `/data/media` | Directory where media files are stored |
+| `ALLOWED_CHAT_IDS` | No | *(empty — accepts all)* | Comma-separated list of chat IDs to back up |
+
+---
+
+## Whitelisting chats
+
+To restrict the bot so it only backs up specific channels or groups, add their IDs to `ALLOWED_CHAT_IDS` in your `.env`:
+
+```
+ALLOWED_CHAT_IDS=-1001234567890,-1009876543210
+```
+
+The chat ID is logged every time a message is backed up:
+
+```
+Backed up message 5 from chat -1003939651973
+```
+
+If `ALLOWED_CHAT_IDS` is left empty, the bot accepts messages from all chats.
+
+After editing `.env`, restart the bot:
+
+```bash
+docker compose up -d
+```
+
+---
+
+## Restoring a backup
+
+The restore script reads the database and replays all messages — including media — back to a specified Telegram chat.
+
+> **Note:** The bot must be an admin with **Post Messages** permission in the target channel before restoring.
+
+### Dry run (preview without sending)
+
+Always do a dry run first to verify what will be sent:
+
+```bash
+docker compose exec bot python restore.py --chat-id -1001234567890 --dry-run
+```
+
+Example output:
+
+```
+Found 4 messages to restore
+DRY RUN — nothing will be sent
+
+[1/4] [2026-05-04 16:25:28 UTC] Rev Stamper @foxRev — [text] /start
+[2/4] [2026-05-04 18:39:07 UTC] Channel post — [text] Testing
+[3/4] [2026-05-04 18:40:43 UTC] Channel post — [sticker]
+[4/4] [2026-05-04 18:40:49 UTC] Channel post — [photo]
+
+Done — restored 4 messages to -1001234567890
+```
+
+### Run the restore
+
+```bash
+docker compose exec bot python restore.py --chat-id -1001234567890
+```
+
+The script handles Telegram's rate limits automatically and waits if it gets throttled.
+
+---
+
+## Accessing the backup data
+
+### Quick query via terminal
+
+```bash
+docker compose exec bot sqlite3 /data/db/telegram_backup.db
+```
+
+```sql
+SELECT * FROM messages;
+SELECT * FROM media;
+.quit
+```
+
+### GUI — DB Browser for SQLite
+
+Download the database file from the Docker volume:
+
+```
+/var/lib/docker/volumes/backup-telegram-with-bot-token_bot_db/_data/telegram_backup.db
+```
+
+Open it with [DB Browser for SQLite](https://sqlitebrowser.org/) for a spreadsheet-like view with filtering and CSV export.
+
+Media files are stored in:
+
+```
+/var/lib/docker/volumes/backup-telegram-with-bot-token_bot_media/_data/
+```
+
+---
+
+## Cleaning up the backup
+
+Stop the bot before deleting any files to avoid database corruption:
+
+```bash
+docker compose stop bot
+
+# Delete the database
+rm /var/lib/docker/volumes/backup-telegram-with-bot-token_bot_db/_data/telegram_backup.db
+
+# Delete all media files
+rm -rf /var/lib/docker/volumes/backup-telegram-with-bot-token_bot_media/_data/*
+
+# Restart — the bot recreates the database tables automatically
+docker compose start bot
+```
+
+You can delete either the database or media independently.
+
+---
 
 ## Logging
 
-The bot logs information and errors to `telegram_backup_bot.log`. Make sure this file is writable and check it for troubleshooting.
+Logs are written to stdout and can be viewed with:
 
-## Contributing
+```bash
+docker compose logs -f
+```
 
-Feel free to submit issues or pull requests. Contributions are welcome!
+Unauthorized chat access attempts are logged as warnings:
+
+```
+WARNING - Ignored message from unauthorized chat -1009999999999
+```
+
+---
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+MIT License. See [LICENSE](LICENSE) for details.
