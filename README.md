@@ -37,15 +37,7 @@ git clone https://github.com/Revstamper/Backup-telegram-with-bot-token.git
 cd Backup-telegram-with-bot-token
 ```
 
-### 2. Install Docker
-
-On Ubuntu 24.04:
-
-```bash
-curl -fsSL https://get.docker.com | sudo sh
-```
-
-### 3. Create your `.env` file
+### 2. Create your `.env` file
 
 ```bash
 cp .env.example .env
@@ -58,18 +50,18 @@ Fill in your values:
 BOT_TOKEN=your_telegram_bot_token_here
 DATABASE_URL=sqlite:////data/db/telegram_backup.db
 MEDIA_BACKUP_DIR=/data/media
-ALLOWED_CHAT_IDS=-1001234567890,-1009876543210
+ALLOWED_CHAT_IDS=-123456789,-19541465165
 ```
 
 See the [Configuration](#configuration) section below for details on each variable.
 
-### 4. Build and start
+### 3. Build and start
 
 ```bash
 docker compose up -d
 ```
 
-### 5. Check the logs
+### 4. Check the logs
 
 ```bash
 docker compose logs -f
@@ -81,7 +73,7 @@ You should see:
 Bot started, polling for messages...
 ```
 
-### 6. Add the bot to your channel
+### 5. Add the bot to your channel
 
 1. Open your channel in Telegram → **Manage Channel** → **Administrators**
 2. Add your bot as an administrator
